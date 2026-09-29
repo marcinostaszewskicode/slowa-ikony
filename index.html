@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Połącz słowo z obrazkiem</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;overflow:hidden;background:#fdf6ff;user-select:none;-webkit-user-select:none;
+      font-family:"Comic Sans MS","Trebuchet MS","Segoe UI",system-ui,sans-serif}
+    .bar{height:58px;display:flex;align-items:center;padding:0 16px;background:#fff;box-shadow:0 2px 12px #6b5b9522;
+      color:#6b5b95;font-weight:bold;font-size:24px;position:relative;z-index:60}
+    .bar>div{flex:1;display:flex;align-items:center;gap:10px}
+    #tm{justify-content:center;font-size:32px}
+    #ct{justify-content:flex-end}
+    .bar button{font:inherit;font-size:16px;border:0;border-radius:14px;padding:6px 12px;background:#e9e2ff;color:#6b5b95;cursor:pointer}
+    .bar button:hover{background:#d8ccff}
+    #st{position:relative;height:calc(100% - 58px);display:flex}
+    #wd,#fd{width:50%;height:100%}
+    #wd{background:#fff3d6;display:flex;flex-direction:column;justify-content:space-evenly;align-items:center;padding:10px}
+    #fd{background:#dff3ff;border-left:4px dashed #b8a9e8}
+    .w{min-width:70%;text-align:center;font-weight:bold;background:#fff;border:5px solid;border-radius:30px;
+      box-shadow:0 8px 16px #0002;animation:pop .5s cubic-bezier(.3,1.6,.5,1);text-transform:lowercase;letter-spacing:.04em}
+    #st.up .w{text-transform:uppercase}
+    .w.bad{animation:shake .45s;background:#ffd6d6;border-color:#e03131!important}
+    .ic{position:absolute;display:flex;align-items:center;justify-content:center;cursor:grab;z-index:10;
+      animation:pop .5s cubic-bezier(.3,1.6,.5,1);filter:drop-shadow(0 5px 5px #0003);transition:filter .2s}
+    .ic.drag{cursor:grabbing;z-index:20;filter:drop-shadow(0 12px 10px #0004)}
+    #ov{position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;padding:20px;background:#fdf6ffdd;backdrop-filter:blur(8px)}
+    #ov[hidden]{display:none}
+    #tt{font-size:clamp(34px,6vw,72px);margin:0 0 10px;font-weight:bold}
+    .wv span{display:inline-block;white-space:pre;animation:wv 1.4s ease-in-out infinite}
+    #ms{font-size:clamp(18px,2.4vw,28px);color:#6b5b95;max-width:760px;line-height:1.5;margin:0 0 24px}
+    #go{font:inherit;font-size:30px;font-weight:bold;color:#fff;background:linear-gradient(#5fd38d,#2f9e44);border:0;border-radius:40px;
+      padding:14px 48px;cursor:pointer;box-shadow:0 8px 0 #237a34,0 14px 20px #0003;animation:wv 1.6s ease-in-out infinite}
+    #go:active{transform:translateY(4px)}
+    @keyframes pop{from{transform:scale(0) rotate(-12deg);opacity:0}to{transform:scale(1);opacity:1}}
+    @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-14px)}40%,80%{transform:translateX(14px)}}
+    @keyframes wv{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.1)}}
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <div><span id="lv"></span><button id="cs"></button><button id="sn">🔊</button></div>
+    <div id="tm">0:00</div>
+    <div id="ct">0 z 16</div>
+  </div>
+  <div id="st">
+    <div id="wd"></div>
+    <div id="fd"></div>
+    <div id="ov"><h1 id="tt" class="wv"></h1><p id="ms"></p><button id="go"></button></div>
+  </div>
+
+<script>
+/* ===== USTAWIENIA ETAPÓW (edytuj tutaj) =====
+   n     - ile słów jest widocznych naraz
+   icon  - rozmiar ikonki w px (ok. 20% mniej na etap)
+   speed - prędkość ikonek w px/s
+   font  - wielkość liter słowa w px
+   pad   - margines wewnątrz pola ze słowem w px                    */
+const LEVELS = [
+  {n:4, icon:84, speed:70, font:46, pad:26},
+  {n:4, icon:67, speed:100, font:39, pad:20},
+  {n:5, icon:54, speed:135, font:33, pad:14},
+  {n:5, icon:43, speed:170, font:28, pad:8}
+];
+const PAIRS_PER_LEVEL = 16;   // ile par trzeba połączyć w etapie
+
+/* ===== LISTA "słowo:ikonka" (oddzielone spacją, dopisuj własne) ===== */
+const LIST = `pies:🐶 kot:🐱 mysz:🐭 królik:🐰 lis:🦊 miś:🐻 panda:🐼 świnka:🐷 krowa:🐮 koń:🐴 żaba:🐸 kura:🐔
+pingwin:🐧 sowa:🦉 żółw:🐢 słoń:🐘 lew:🦁 małpa:🐒 żyrafa:🦒 ryba:🐟 ślimak:🐌 pszczoła:🐝 motyl:🦋 biedronka:🐞
+jabłko:🍎 banan:🍌 truskawka:🍓 wiśnie:🍒 winogrona:🍇 arbuz:🍉 cytryna:🍋 gruszka:🍐
+marchewka:🥕 pomidor:🍅 kukurydza:🌽 ziemniak:🥔 chleb:🍞 ser:🧀 jajko:🥚 lody:🍦
+róża:🌹 słonecznik:🌻 tulipan:🌷 grzyb:🍄 drzewo:🌳 słońce:☀️ księżyc:🌙 gwiazda:⭐
+auto:🚗 autobus:🚌 pociąg:🚂 samolot:✈️ rower:🚲 statek:🚢 śmigłowiec:🚁 traktor:🚜
+strażak:👨‍🚒 strażaczka:👩‍🚒 kucharz:👨‍🍳 lekarz:👨‍⚕️ lekarka:👩‍⚕️ policjant:👮 nauczycielka:👩‍🏫 rolnik:👨‍🌾 astronauta:🧑‍🚀 malarz:🧑‍🎨
+dom:🏠 piłka:⚽ balon:🎈 prezent:🎁 klucz:🔑 budzik:⏰ książka:📚 parasol:☂️`;
+const P = LIST.split(/\s+/).map(s => { const [w, e] = s.split(':'); return {w, e}; });
+
+const COL = ['#e8478b','#2f9e44','#1c7ed6','#f08c00','#9c36b5','#e03131'];
+const $ = id => document.getElementById(id);
+const wd=$('wd'), fd=$('fd'), st=$('st'), tm=$('tm'), ct=$('ct'), lv=$('lv'), ov=$('ov'), tt=$('tt'), ms=$('ms'), go=$('go'), cs=$('cs'), sn=$('sn');
+
+let lvl=0, done=0, elapsed=0, running=false, drag=null, active=[], deck=[], times=[], colN=0, after=()=>{};
+
+/* ---- pomocnicze ---- */
+const fmt = t => { t=Math.floor(t); return (t/60|0)+':'+String(t%60).padStart(2,'0'); };
+const shuffle = a => { for(let i=a.length;i>1;){const j=Math.random()*i--|0;[a[i],a[j]]=[a[j],a[i]];} return a; };
+const KEY='polaczSlowoHiScore';
+const getHi = () => { try { return parseFloat(localStorage.getItem(KEY))||null; } catch(e){ return null; } };
+const setHi = v => { try { localStorage.setItem(KEY, v); } catch(e){} };
+const bnd = s => ({x0:fd.offsetLeft, x1:fd.offsetLeft+fd.offsetWidth-s, y0:0, y1:fd.offsetHeight-s});
+const put = c => { c.el.style.left=c.x+'px'; c.el.style.top=c.y+'px'; };
+
+/* ---- dźwięki (Web Audio, bez plików) ---- */
+let ac, muted=false;
+function tone(f, t, d, type='sine', v=.2){
+  if(muted) return;
+  ac = ac || new (window.AudioContext||window.webkitAudioContext)();
+  const o=ac.createOscillator(), g=ac.createGain(), s=ac.currentTime+t;
+  o.type=type; o.frequency.value=f;
+  g.gain.setValueAtTime(v,s); g.gain.exponentialRampToValueAtTime(.001,s+d);
+  o.connect(g); g.connect(ac.destination); o.start(s); o.stop(s+d);
+}
+const sndGood = () => { tone(660,0,.15); tone(880,.12,.15); tone(1320,.24,.3); };
+const sndBad  = () => { tone(180,0,.35,'sawtooth',.13); tone(140,.12,.3,'sawtooth',.13); };
+
+/* ---- losowanie par (bez powtórek i bez podobnych słów naraz, np. strażak/strażaczka) ---- */
+function draw(){
+  for(let k=0;k<deck.length;k++){
+    const p=deck[k];
+    if(!active.some(a=>a.p.w.slice(0,5)===p.w.slice(0,5))){ deck.splice(k,1); return p; }
+  }
+  deck = shuffle(P.slice()); return draw();
+}
+
+/* ---- dodanie pary: słowo po lewej (w miejsce starego), ikonka w losowym miejscu po prawej ---- */
+function addPair(oldBox){
+  const p=draw(), L=LEVELS[lvl], color=COL[colN++%COL.length];
+  const box=document.createElement('div');
+  box.className='w'; box.textContent=p.w;
+  box.style.cssText=`font-size:${L.font}px;padding:${L.pad}px ${L.pad*1.6}px;margin:${L.pad/3}px 0;color:${color};border-color:${color}88`;
+  oldBox ? wd.replaceChild(box,oldBox) : wd.appendChild(box);
+
+  const el=document.createElement('div'), s=L.icon, v=L.speed/Math.SQRT2, b=bnd(s);
+  el.className='ic'; el.textContent=p.e;
+  el.style.cssText=`width:${s}px;height:${s}px;font-size:${s*.8}px;line-height:1`;
+  const c={el, s, v, x:0, y:0, vx:0, vy:0};
+  const a={p, box, ic:c};
+  respawn(c);
+  st.appendChild(el);
+  el.onpointerdown = e => {
+    if(!running||drag||e.button) return;
+    drag=a; el.setPointerCapture(e.pointerId); el.classList.add('drag');
+    const r=st.getBoundingClientRect(); a.dx=e.clientX-r.left-c.x; a.dy=e.clientY-r.top-c.y;
+  };
+  el.onpointermove = e => {
+    if(drag!==a) return;
+    const r=st.getBoundingClientRect();
+    c.x=Math.max(0,Math.min(r.width-c.s,e.clientX-r.left-a.dx));
+    c.y=Math.max(0,Math.min(r.height-c.s,e.clientY-r.top-a.dy));
+    put(c);
+  };
+  el.onpointerup = el.onpointercancel = e => { if(drag===a) drop(a,e.clientX,e.clientY); };
+  active.push(a);
+}
+function respawn(c){
+  const b=bnd(c.s);
+  c.x=b.x0+Math.random()*(b.x1-b.x0); c.y=b.y0+Math.random()*(b.y1-b.y0);
+  c.vx=(Math.random()<.5?-1:1)*c.v; c.vy=(Math.random()<.5?-1:1)*c.v; put(c);
+}
+
+/* ---- upuszczenie ikonki ---- */
+function drop(a,cx,cy){
+  drag=null; const c=a.ic; c.el.classList.remove('drag');
+  const hit=active.find(b=>{const r=b.box.getBoundingClientRect();return cx>=r.left&&cx<=r.right&&cy>=r.top&&cy<=r.bottom;});
+  if(!hit){ const b=bnd(c.s); c.x=Math.max(b.x0,Math.min(b.x1,c.x)); c.y=Math.max(b.y0,Math.min(b.y1,c.y)); put(c); return; }
+  if(hit!==a){                       // złe dopasowanie
+    sndBad(); hit.box.classList.add('bad');
+    setTimeout(()=>hit.box.classList.remove('bad'),450);
+    respawn(c); return;
+  }
+  sndGood();                          // dobre dopasowanie
+  c.el.remove(); active.splice(active.indexOf(a),1);
+  ct.textContent=(++done)+' z '+PAIRS_PER_LEVEL;
+  if(done>=PAIRS_PER_LEVEL) finishLevel(); else addPair(a.box);
+}
+
+/* ---- pętla animacji ---- */
+let last=0;
+function tick(t){
+  const dt=Math.min((t-last)/1000,.05); last=t;
+  if(running){
+    elapsed+=dt; tm.textContent=fmt(elapsed);
+    for(const a of active){
+      const c=a.ic; if(drag===a) continue;
+      const b=bnd(c.s); c.x+=c.vx*dt; c.y+=c.vy*dt;
+      if(c.x<b.x0){c.x=b.x0;c.vx=Math.abs(c.vx);} if(c.x>b.x1){c.x=b.x1;c.vx=-Math.abs(c.vx);}
+      if(c.y<b.y0){c.y=b.y0;c.vy=Math.abs(c.vy);} if(c.y>b.y1){c.y=b.y1;c.vy=-Math.abs(c.vy);}
+      put(c);
+    }
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+/* ---- ekrany ---- */
+function wave(text){
+  tt.innerHTML=[...text].map((ch,i)=>`<span style="animation-delay:${i*.09}s;color:${COL[i%COL.length]}">${ch}</span>`).join('');
+}
+function show(title,msg,btn,fn){
+  wave(title); ms.innerHTML=msg; go.textContent=btn; after=fn; ov.hidden=false;
+}
+go.onclick=()=>after();
+
+function showStart(){
+  lvl=0; times=[]; deck=shuffle(P.slice()); lv.textContent='';
+  tm.textContent='0:00'; ct.textContent='0 z '+PAIRS_PER_LEVEL;
+  const hi=getHi();
+  show('Połącz słowo z obrazkiem',
+    'Złap ikonkę myszką i przeciągnij ją na pasujące słowo.<br>Są 4 etapy, w każdym połącz '+PAIRS_PER_LEVEL+' par. Graj jak najszybciej!<br><br>🏆 Rekord: <b>'+(hi?fmt(hi):'brak')+'</b>',
+    'Start ▶', startLevel);
+}
+function startLevel(){
+  active=[]; wd.innerHTML=''; document.querySelectorAll('.ic').forEach(e=>e.remove());
+  done=0; elapsed=0; tm.textContent='0:00'; ct.textContent='0 z '+PAIRS_PER_LEVEL;
+  lv.textContent='Etap '+(lvl+1)+' z '+LEVELS.length; ov.hidden=true;
+  for(let i=0;i<LEVELS[lvl].n;i++) addPair();
+  running=true;
+}
+function finishLevel(){
+  running=false; times.push(elapsed);
+  active=[]; wd.innerHTML=''; document.querySelectorAll('.ic').forEach(e=>e.remove());
+  if(lvl<LEVELS.length-1){
+    show('Etap '+(lvl+1)+' ukończony!','Twój czas: <b>'+fmt(elapsed)+'</b><br>Odpocznij chwilkę i naciśnij dalej.','Dalej ▶',()=>{lvl++;startLevel();});
+  } else {
+    const total=times.reduce((s,x)=>s+x,0), hi=getHi(), rec=!hi||total<hi;
+    if(rec) setHi(total);
+    show('Brawo, to już koniec!',
+      times.map((x,i)=>'Etap '+(i+1)+': '+fmt(x)).join(' &nbsp;•&nbsp; ')+'<br><br>Suma czasów: <b>'+fmt(total)+'</b>'+
+      (rec?'<br>🎉 Nowy rekord! 🎉':'<br>🏆 Rekord: <b>'+fmt(hi)+'</b>'),'Zagraj jeszcze raz',showStart);
+  }
+}
+
+/* ---- przyciski u góry ---- */
+const csLabel=()=>cs.textContent='Litery: '+(st.classList.contains('up')?'WIELKIE':'małe');
+cs.onclick=()=>{st.classList.toggle('up');csLabel();};
+sn.onclick=()=>{muted=!muted;sn.textContent=muted?'🔇':'🔊';};
+csLabel(); showStart();
+</script>
+</body>
+</html>
